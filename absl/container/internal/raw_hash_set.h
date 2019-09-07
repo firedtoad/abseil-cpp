@@ -350,7 +350,7 @@ struct GroupSse2Impl {
     return BitMask<uint32_t, kWidth>(
         _mm_movemask_epi8(_mm_sign_epi8(ctrl, ctrl)));
 #else
-    return Match(kEmpty);
+    return Match(static_cast<h2_t>(kEmpty));
 #endif
   }
 
@@ -1133,15 +1133,16 @@ class raw_hash_set {
   }
 
   // Erases the element pointed to by `it`.  Unlike `std::unordered_set::erase`,
-  // this method returns void to reduce algorithmic complexity to O(1).  In
-  // order to erase while iterating across a map, use the following idiom (which
-  // also works for standard containers):
+  // this method returns void to reduce algorithmic complexity to O(1).  The
+  // iterator is invalidated, so any increment should be done before calling
+  // erase.  In order to erase while iterating across a map, use the following
+  // idiom (which also works for standard containers):
   //
   // for (auto it = m.begin(), end = m.end(); it != end;) {
+  //   // `erase()` will invalidate `it`, so advance `it` first.
+  //   auto copy_it = it++;
   //   if (<pred>) {
-  //     m.erase(it++);
-  //   } else {
-  //     ++it;
+  //     m.erase(copy_it);
   //   }
   // }
   void erase(const_iterator cit) { erase(cit.inner_); }
@@ -1182,7 +1183,7 @@ class raw_hash_set {
 
   node_type extract(const_iterator position) {
     auto node =
-        CommonAccess::Make<node_type>(alloc_ref(), position.inner_.slot_);
+        CommonAccess::Transfer<node_type>(alloc_ref(), position.inner_.slot_);
     erase_meta_only(position);
     return node;
   }

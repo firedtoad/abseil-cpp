@@ -195,6 +195,21 @@ TEST(StrCat, Basics) {
   EXPECT_EQ(result, "12333444455555666666777777788888888999999999");
 }
 
+TEST(StrCat, CornerCases) {
+  std::string result;
+
+  result = absl::StrCat("");  // NOLINT
+  EXPECT_EQ(result, "");
+  result = absl::StrCat("", "");
+  EXPECT_EQ(result, "");
+  result = absl::StrCat("", "", "");
+  EXPECT_EQ(result, "");
+  result = absl::StrCat("", "", "", "");
+  EXPECT_EQ(result, "");
+  result = absl::StrCat("", "", "", "", "");
+  EXPECT_EQ(result, "");
+}
+
 // A minimal allocator that uses malloc().
 template <typename T>
 struct Mallocator {
@@ -408,6 +423,20 @@ TEST(StrCat, VectorBoolReferenceTypes) {
   EXPECT_EQ(result, "1010");
 }
 
+// Passing nullptr to memcpy is undefined behavior and this test
+// provides coverage of codepaths that handle empty strings with nullptrs.
+TEST(StrCat, AvoidsMemcpyWithNullptr) {
+  EXPECT_EQ(absl::StrCat(42, absl::string_view{}), "42");
+
+  // Cover CatPieces code.
+  EXPECT_EQ(absl::StrCat(1, 2, 3, 4, 5, absl::string_view{}), "12345");
+
+  // Cover AppendPieces.
+  std::string result;
+  absl::StrAppend(&result, 1, 2, 3, 4, 5, absl::string_view{});
+  EXPECT_EQ(result, "12345");
+}
+
 #ifdef GTEST_HAS_DEATH_TEST
 TEST(StrAppend, Death) {
   std::string s = "self";
@@ -419,10 +448,34 @@ TEST(StrAppend, Death) {
 }
 #endif  // GTEST_HAS_DEATH_TEST
 
-TEST(StrAppend, EmptyString) {
-  std::string s = "";
-  absl::StrAppend(&s, s);
-  EXPECT_EQ(s, "");
+TEST(StrAppend, CornerCases) {
+  std::string result;
+  absl::StrAppend(&result, "");
+  EXPECT_EQ(result, "");
+  absl::StrAppend(&result, "", "");
+  EXPECT_EQ(result, "");
+  absl::StrAppend(&result, "", "", "");
+  EXPECT_EQ(result, "");
+  absl::StrAppend(&result, "", "", "", "");
+  EXPECT_EQ(result, "");
+  absl::StrAppend(&result, "", "", "", "", "");
+  EXPECT_EQ(result, "");
+}
+
+TEST(StrAppend, CornerCasesNonEmptyAppend) {
+  for (std::string result : {"hello", "a std::string too long to fit in the SSO"}) {
+    const std::string expected = result;
+    absl::StrAppend(&result, "");
+    EXPECT_EQ(result, expected);
+    absl::StrAppend(&result, "", "");
+    EXPECT_EQ(result, expected);
+    absl::StrAppend(&result, "", "", "");
+    EXPECT_EQ(result, expected);
+    absl::StrAppend(&result, "", "", "", "");
+    EXPECT_EQ(result, expected);
+    absl::StrAppend(&result, "", "", "", "", "");
+    EXPECT_EQ(result, expected);
+  }
 }
 
 template <typename IntType>

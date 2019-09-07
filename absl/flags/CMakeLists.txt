@@ -84,11 +84,11 @@ absl_cc_library(
   DEPS
     absl::flags_config
     absl::flags_marshalling
-    absl::base
     absl::core_headers
+    absl::optional
+    absl::raw_logging_internal
     absl::strings
     absl::synchronization
-    absl::optional
 )
 
 # Internal-only target, do not depend on directly.
@@ -108,9 +108,9 @@ absl_cc_library(
   DEPS
     absl::flags_config
     absl::flags_handle
-    absl::base
     absl::core_headers
     absl::dynamic_annotations
+    absl::raw_logging_internal
     absl::strings
     absl::synchronization
 )
@@ -120,6 +120,7 @@ absl_cc_library(
     flags
   SRCS
     "flag.cc"
+    "internal/flag.cc"
   HDRS
     "declare.h"
     "flag.h"
@@ -136,12 +137,13 @@ absl_cc_library(
     absl::base
     absl::core_headers
     absl::strings
+    absl::synchronization
 )
 
 # Internal-only target, do not depend on directly.
 absl_cc_library(
   NAME
-    flags_usage
+    flags_usage_internal
   SRCS
     "internal/usage.cc"
   HDRS
@@ -155,6 +157,23 @@ absl_cc_library(
     absl::flags
     absl::flags_handle
     absl::flags_internal
+    absl::strings
+    absl::synchronization
+)
+
+absl_cc_library(
+  NAME
+    flags_usage
+  SRCS
+    "usage.cc"
+  HDRS
+    "usage.h"
+  COPTS
+    ${ABSL_DEFAULT_COPTS}
+  LINKOPTS
+    ${ABSL_DEFAULT_LINKOPTS}
+  DEPS
+    absl::flags_usage_internal
     absl::strings
     absl::synchronization
 )
@@ -248,8 +267,8 @@ absl_cc_test(
     ${ABSL_TEST_COPTS}
   DEPS
     absl::flags
-    absl::base
     absl::flags_parse
+    absl::raw_logging_internal
     absl::scoped_set_env
     absl::span
     absl::strings

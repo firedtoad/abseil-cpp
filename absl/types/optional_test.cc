@@ -14,6 +14,9 @@
 
 #include "absl/types/optional.h"
 
+// This test is a no-op when absl::optional is an alias for std::optional.
+#if !defined(ABSL_HAVE_STD_OPTIONAL)
+
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -1628,6 +1631,7 @@ TEST(optionalTest, AssignmentConstraints) {
   EXPECT_TRUE(absl::is_copy_assignable<absl::optional<AnyLike>>::value);
 }
 
+#if !defined(__EMSCRIPTEN__)
 struct NestedClassBug {
   struct Inner {
     bool dummy = false;
@@ -1650,5 +1654,8 @@ TEST(optionalTest, InPlaceTSFINAEBug) {
   o.emplace();
   EXPECT_TRUE(o.has_value());
 }
+#endif  // !defined(__EMSCRIPTEN__)
 
 }  // namespace
+
+#endif  // #if !defined(ABSL_HAVE_STD_OPTIONAL)

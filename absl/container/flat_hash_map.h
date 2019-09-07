@@ -77,7 +77,7 @@ struct FlatHashMapPolicy;
 // NOTE: A `flat_hash_map` stores its value types directly inside its
 // implementation array to avoid memory indirection. Because a `flat_hash_map`
 // is designed to move data when rehashed, map values will not retain pointer
-// stability. If you require pointer stability, or your values are large,
+// stability. If you require pointer stability, or if your values are large,
 // consider using `absl::flat_hash_map<Key, std::unique_ptr<Value>>` instead.
 // If your types are not moveable or you require pointer stability for keys,
 // consider `absl::node_hash_map`.
@@ -360,6 +360,10 @@ class flat_hash_map : public absl::container_internal::raw_hash_map<
   // Inserts (via copy or move) the element of the specified key into the
   // `flat_hash_map` using the position of `hint` as a non-binding suggestion
   // for where to begin the insertion search.
+  //
+  // All `try_emplace()` overloads make the same guarantees regarding rvalue
+  // arguments as `std::unordered_map::try_emplace()`, namely that these
+  // functions will not move from rvalue arguments if insertions do not happen.
   using Base::try_emplace;
 
   // flat_hash_map::extract()

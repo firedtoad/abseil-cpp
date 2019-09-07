@@ -1,5 +1,5 @@
 #
-#  Copyright 2019 The Abseil Authors.
+# Copyright 2019 The Abseil Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 load(
     "//absl:copts/configure_copts.bzl",
     "ABSL_DEFAULT_COPTS",
@@ -97,8 +98,8 @@ cc_library(
     deps = [
         ":config",
         ":marshalling",
-        "//absl/base",
         "//absl/base:core_headers",
+        "//absl/base:raw_logging_internal",
         "//absl/strings",
         "//absl/synchronization",
         "//absl/types:optional",
@@ -123,9 +124,9 @@ cc_library(
     deps = [
         ":config",
         ":handle",
-        "//absl/base",
         "//absl/base:core_headers",
         "//absl/base:dynamic_annotations",
+        "//absl/base:raw_logging_internal",
         "//absl/strings",
         "//absl/synchronization",
     ],
@@ -135,6 +136,7 @@ cc_library(
     name = "flag",
     srcs = [
         "flag.cc",
+        "internal/flag.cc",
     ],
     hdrs = [
         "declare.h",
@@ -151,11 +153,12 @@ cc_library(
         "//absl/base",
         "//absl/base:core_headers",
         "//absl/strings",
+        "//absl/synchronization",
     ],
 )
 
 cc_library(
-    name = "usage",
+    name = "usage_internal",
     srcs = [
         "internal/usage.cc",
     ],
@@ -178,6 +181,23 @@ cc_library(
 )
 
 cc_library(
+    name = "usage",
+    srcs = [
+        "usage.cc",
+    ],
+    hdrs = [
+        "usage.h",
+    ],
+    copts = ABSL_DEFAULT_COPTS,
+    linkopts = ABSL_DEFAULT_LINKOPTS,
+    deps = [
+        ":usage_internal",
+        "//absl/strings",
+        "//absl/synchronization",
+    ],
+)
+
+cc_library(
     name = "parse",
     srcs = ["parse.cc"],
     hdrs = [
@@ -193,6 +213,7 @@ cc_library(
         ":internal",
         ":registry",
         ":usage",
+        ":usage_internal",
         "//absl/strings",
         "//absl/synchronization",
     ],
@@ -288,7 +309,7 @@ cc_test(
     deps = [
         ":flag",
         ":parse",
-        "//absl/base",
+        "//absl/base:raw_logging_internal",
         "//absl/base:scoped_set_env",
         "//absl/strings",
         "//absl/types:span",
@@ -358,6 +379,7 @@ cc_test(
         ":internal",
         ":parse",
         ":usage",
+        ":usage_internal",
         "//absl/memory",
         "//absl/strings",
         "@com_google_googletest//:gtest",
