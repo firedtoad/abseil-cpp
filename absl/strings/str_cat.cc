@@ -15,34 +15,34 @@
 #include "absl/strings/str_cat.h"
 
 #include <assert.h>
+
 #include <algorithm>
 #include <cstdint>
 #include <cstring>
 
 #include "absl/strings/ascii.h"
 #include "absl/strings/internal/resize_uninitialized.h"
+#include "absl/strings/numbers.h"
 
 namespace absl {
+ABSL_NAMESPACE_BEGIN
 
 AlphaNum::AlphaNum(Hex hex) {
+  static_assert(numbers_internal::kFastToBufferSize >= 32,
+                "This function only works when output buffer >= 32 bytes long");
   char* const end = &digits_[numbers_internal::kFastToBufferSize];
-  char* writer = end;
-  uint64_t value = hex.value;
-  static const char hexdigits[] = "0123456789abcdef";
-  do {
-    *--writer = hexdigits[value & 0xF];
-    value >>= 4;
-  } while (value != 0);
-
-  char* beg;
-  if (end - writer < hex.width) {
-    beg = end - hex.width;
-    std::fill_n(beg, writer - beg, hex.fill);
+  auto real_width =
+      absl::numbers_internal::FastHexToBufferZeroPad16(hex.value, end - 16);
+  if (real_width >= hex.width) {
+    piece_ = absl::string_view(end - real_width, real_width);
   } else {
-    beg = writer;
+    // Pad first 16 chars because FastHexToBufferZeroPad16 pads only to 16 and
+    // max pad width can be up to 20.
+    std::memset(end - 32, hex.fill, 16);
+    // Patch up everything else up to the real_width.
+    std::memset(end - real_width - 16, hex.fill, 16);
+    piece_ = absl::string_view(end - hex.width, hex.width);
   }
-
-  piece_ = absl::string_view(beg, end - beg);
 }
 
 AlphaNum::AlphaNum(Dec dec) {
@@ -242,4 +242,5 @@ void StrAppend(std::string* dest, const AlphaNum& a, const AlphaNum& b,
   assert(out == begin + dest->size());
 }
 
+ABSL_NAMESPACE_END
 }  // namespace absl

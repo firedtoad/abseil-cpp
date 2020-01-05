@@ -63,7 +63,35 @@
 #include <TargetConditionals.h>
 #endif
 
+#include "absl/base/options.h"
 #include "absl/base/policy_checks.h"
+
+// -----------------------------------------------------------------------------
+// Abseil namespace annotations
+// -----------------------------------------------------------------------------
+
+// ABSL_NAMESPACE_BEGIN/ABSL_NAMESPACE_END
+//
+// An annotation placed at the beginning/end of each `namespace absl` scope.
+// This is used to inject an inline namespace.
+//
+// The proper way to write Abseil code in the `absl` namespace is:
+//
+// namespace absl {
+// ABSL_NAMESPACE_BEGIN
+//
+// void Foo();  // absl::Foo().
+//
+// ABSL_NAMESPACE_END
+// }  // namespace absl
+//
+// Users of Abseil should not use these macros, because users of Abseil should
+// not write `namespace absl {` in their own code for any reason.  (Abseil does
+// not support forward declarations of its own types, nor does it support
+// user-provided specialization of Abseil templates.  Code that violates these
+// rules may be broken without warning.)
+#define ABSL_NAMESPACE_BEGIN
+#define ABSL_NAMESPACE_END
 
 // -----------------------------------------------------------------------------
 // Compiler Feature Checks
@@ -82,6 +110,12 @@
 #define ABSL_HAVE_BUILTIN(x) __has_builtin(x)
 #else
 #define ABSL_HAVE_BUILTIN(x) 0
+#endif
+
+#if defined(__is_identifier)
+#define ABSL_INTERNAL_HAS_KEYWORD(x) !(__is_identifier(x))
+#else
+#define ABSL_INTERNAL_HAS_KEYWORD(x) 0
 #endif
 
 // ABSL_HAVE_TLS is defined to 1 when __thread should be supported.
@@ -130,6 +164,17 @@
     (defined(_MSC_VER) && !defined(__NVCC__))
 #define ABSL_HAVE_STD_IS_TRIVIALLY_CONSTRUCTIBLE 1
 #define ABSL_HAVE_STD_IS_TRIVIALLY_ASSIGNABLE 1
+#endif
+
+// ABSL_HAVE_SOURCE_LOCATION_CURRENT
+//
+// Indicates whether `absl::SourceLocation::current()` will return useful
+// information in some contexts.
+#ifndef ABSL_HAVE_SOURCE_LOCATION_CURRENT
+#if ABSL_INTERNAL_HAS_KEYWORD(__builtin_LINE) && \
+    ABSL_INTERNAL_HAS_KEYWORD(__builtin_FILE)
+#define ABSL_HAVE_SOURCE_LOCATION_CURRENT 1
+#endif
 #endif
 
 // ABSL_HAVE_THREAD_LOCAL
@@ -307,7 +352,7 @@
 
 // ABSL_HAVE_SEMAPHORE_H
 //
-// Checks whether the platform supports the <semaphore.h> header and sem_open(3)
+// Checks whether the platform supports the <semaphore.h> header and sem_init(3)
 // family of functions as standardized in POSIX.1-2001.
 //
 // Note: While Apple provides <semaphore.h> for both iOS and macOS, it is
@@ -334,8 +379,15 @@
 #define ABSL_HAVE_ALARM 1
 #elif defined(_MSC_VER)
 // feature tests for Microsoft's library
+#elif defined(__MINGW32__)
+// mingw32 doesn't provide alarm(2):
+// https://osdn.net/projects/mingw/scm/git/mingw-org-wsl/blobs/5.2-trunk/mingwrt/include/unistd.h
+// mingw-w64 provides a no-op implementation:
+// https://sourceforge.net/p/mingw-w64/mingw-w64/ci/master/tree/mingw-w64-crt/misc/alarm.c
 #elif defined(__EMSCRIPTEN__)
 // emscripten doesn't support signals
+#elif defined(__Fuchsia__)
+// Signals don't exist on fuchsia.
 #elif defined(__native_client__)
 #else
 // other standard libraries
@@ -461,6 +513,68 @@
 #define ABSL_HAVE_STD_STRING_VIEW 1
 #endif
 
+// ABSL_USES_STD_ANY
+//
+// Indicates whether absl::any is an alias for std::any.
+#if !defined(ABSL_OPTION_USE_STD_ANY)
+#error options.h is misconfigured.
+#elif ABSL_OPTION_USE_STD_ANY == 0 || \
+    (ABSL_OPTION_USE_STD_ANY == 2 && !defined(ABSL_HAVE_STD_ANY))
+#undef ABSL_USES_STD_ANY
+#elif ABSL_OPTION_USE_STD_ANY == 1 || \
+    (ABSL_OPTION_USE_STD_ANY == 2 && defined(ABSL_HAVE_STD_ANY))
+#define ABSL_USES_STD_ANY 1
+#else
+#error options.h is misconfigured.
+#endif
+
+// ABSL_USES_STD_OPTIONAL
+//
+// Indicates whether absl::optional is an alias for std::optional.
+#if !defined(ABSL_OPTION_USE_STD_OPTIONAL)
+#error options.h is misconfigured.
+#elif ABSL_OPTION_USE_STD_OPTIONAL == 0 || \
+    (ABSL_OPTION_USE_STD_OPTIONAL == 2 && !defined(ABSL_HAVE_STD_OPTIONAL))
+#undef ABSL_USES_STD_OPTIONAL
+#elif ABSL_OPTION_USE_STD_OPTIONAL == 1 || \
+    (ABSL_OPTION_USE_STD_OPTIONAL == 2 && defined(ABSL_HAVE_STD_OPTIONAL))
+#define ABSL_USES_STD_OPTIONAL 1
+#else
+#error options.h is misconfigured.
+#endif
+
+// ABSL_USES_STD_VARIANT
+//
+// Indicates whether absl::variant is an alias for std::variant.
+#if !defined(ABSL_OPTION_USE_STD_VARIANT)
+#error options.h is misconfigured.
+#elif ABSL_OPTION_USE_STD_VARIANT == 0 || \
+    (ABSL_OPTION_USE_STD_VARIANT == 2 && !defined(ABSL_HAVE_STD_VARIANT))
+#undef ABSL_USES_STD_VARIANT
+#elif ABSL_OPTION_USE_STD_VARIANT == 1 || \
+    (ABSL_OPTION_USE_STD_VARIANT == 2 && defined(ABSL_HAVE_STD_VARIANT))
+#define ABSL_USES_STD_VARIANT 1
+#else
+#error options.h is misconfigured.
+#endif
+
+// ABSL_USES_STD_STRING_VIEW
+//
+// Indicates whether absl::string_view is an alias for std::string_view.
+#if !defined(ABSL_OPTION_USE_STD_STRING_VIEW)
+#error options.h is misconfigured.
+#elif ABSL_OPTION_USE_STD_STRING_VIEW == 0 || \
+    (ABSL_OPTION_USE_STD_STRING_VIEW == 2 &&  \
+     !defined(ABSL_HAVE_STD_STRING_VIEW))
+#undef ABSL_USES_STD_STRING_VIEW
+#elif ABSL_OPTION_USE_STD_STRING_VIEW == 1 || \
+    (ABSL_OPTION_USE_STD_STRING_VIEW == 2 &&  \
+     defined(ABSL_HAVE_STD_STRING_VIEW))
+#define ABSL_USES_STD_STRING_VIEW 1
+#else
+#error options.h is misconfigured.
+#endif
+
 // In debug mode, MSVC 2017's std::variant throws a EXCEPTION_ACCESS_VIOLATION
 // SEH exception from emplace for variant<SomeStruct> when constructing the
 // struct can throw. This defeats some of variant_test and
@@ -468,5 +582,7 @@
 #if defined(_MSC_VER) && _MSC_VER >= 1700 && defined(_DEBUG)
 #define ABSL_INTERNAL_MSVC_2017_DBG_MODE
 #endif
+
+#undef ABSL_INTERNAL_HAS_KEYWORD
 
 #endif  // ABSL_BASE_CONFIG_H_

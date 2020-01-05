@@ -33,6 +33,7 @@
 // * `double`
 // * `std::string`
 // * `std::vector<std::string>`
+// * `absl::LogSeverity` (provided here due to dependency ordering)
 //
 // Note that support for integral types is implemented using overloads for
 // variable-width fundamental types (`short`, `int`, `long`, etc.). However,
@@ -167,6 +168,7 @@
 #include "absl/strings/string_view.h"
 
 namespace absl {
+ABSL_NAMESPACE_BEGIN
 namespace flags_internal {
 
 // Overloads of `AbslParseFlag()` and `AbslUnparseFlag()` for fundamental types.
@@ -178,8 +180,8 @@ bool AbslParseFlag(absl::string_view, unsigned int*, std::string*);    // NOLINT
 bool AbslParseFlag(absl::string_view, long*, std::string*);            // NOLINT
 bool AbslParseFlag(absl::string_view, unsigned long*, std::string*);   // NOLINT
 bool AbslParseFlag(absl::string_view, long long*, std::string*);       // NOLINT
-bool AbslParseFlag(absl::string_view, unsigned long long*,
-                   std::string*);  // NOLINT
+bool AbslParseFlag(absl::string_view, unsigned long long*,             // NOLINT
+                   std::string*);
 bool AbslParseFlag(absl::string_view, float*, std::string*);
 bool AbslParseFlag(absl::string_view, double*, std::string*);
 bool AbslParseFlag(absl::string_view, std::string*, std::string*);
@@ -248,6 +250,14 @@ inline std::string UnparseFlag(const T& v) {
   return flags_internal::Unparse(v);
 }
 
+// Overloads for `absl::LogSeverity` can't (easily) appear alongside that type's
+// definition because it is layered below flags.  See proper documentation in
+// base/log_severity.h.
+enum class LogSeverity : int;
+bool AbslParseFlag(absl::string_view, absl::LogSeverity*, std::string*);
+std::string AbslUnparseFlag(absl::LogSeverity);
+
+ABSL_NAMESPACE_END
 }  // namespace absl
 
 #endif  // ABSL_FLAGS_MARSHALLING_H_

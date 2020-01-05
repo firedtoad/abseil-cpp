@@ -22,6 +22,7 @@
 #include "absl/types/optional.h"
 
 namespace absl {
+ABSL_NAMESPACE_BEGIN
 namespace container_internal {
 
 template <class, class = void>
@@ -117,7 +118,7 @@ class node_handle_base {
 template <typename Policy, typename PolicyTraits, typename Alloc,
           typename = void>
 class node_handle : public node_handle_base<PolicyTraits, Alloc> {
-  using Base = typename node_handle::node_handle_base;
+  using Base = node_handle_base<PolicyTraits, Alloc>;
 
  public:
   using value_type = typename PolicyTraits::value_type;
@@ -137,7 +138,7 @@ template <typename Policy, typename PolicyTraits, typename Alloc>
 class node_handle<Policy, PolicyTraits, Alloc,
                   absl::void_t<typename Policy::mapped_type>>
     : public node_handle_base<PolicyTraits, Alloc> {
-  using Base = typename node_handle::node_handle_base;
+  using Base = node_handle_base<PolicyTraits, Alloc>;
 
  public:
   using key_type = typename Policy::key_type;
@@ -167,6 +168,11 @@ struct CommonAccess {
   }
 
   template <typename Node>
+  static void Destroy(Node* node) {
+    node->destroy();
+  }
+
+  template <typename Node>
   static void Reset(Node* node) {
     node->reset();
   }
@@ -191,6 +197,7 @@ struct InsertReturnType {
 };
 
 }  // namespace container_internal
+ABSL_NAMESPACE_END
 }  // namespace absl
 
 #endif  // ABSL_CONTAINER_INTERNAL_CONTAINER_H_

@@ -83,11 +83,13 @@ struct timeval;
 #include <type_traits>
 #include <utility>
 
+#include "absl/base/macros.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/civil_time.h"
 #include "absl/time/internal/cctz/include/cctz/time_zone.h"
 
 namespace absl {
+ABSL_NAMESPACE_BEGIN
 
 class Duration;  // Defined below
 class Time;      // Defined below
@@ -421,7 +423,9 @@ Duration Milliseconds(T n) {
 template <typename T, time_internal::EnableIfFloat<T> = 0>
 Duration Seconds(T n) {
   if (n >= 0) {  // Note: `NaN >= 0` is false.
-    if (n >= (std::numeric_limits<int64_t>::max)()) return InfiniteDuration();
+    if (n >= static_cast<T>((std::numeric_limits<int64_t>::max)())) {
+      return InfiniteDuration();
+    }
     return time_internal::MakePosDoubleDuration(n);
   } else {
     if (std::isnan(n))
@@ -545,7 +549,11 @@ bool ParseDuration(const std::string& dur_string, Duration* d);
 
 // Support for flag values of type Duration. Duration flags must be specified
 // in a format that is valid input for absl::ParseDuration().
+bool AbslParseFlag(absl::string_view text, Duration* dst, std::string* error);
+std::string AbslUnparseFlag(Duration d);
+ABSL_DEPRECATED("Use AbslParseFlag() instead.")
 bool ParseFlag(const std::string& text, Duration* dst, std::string* error);
+ABSL_DEPRECATED("Use AbslUnparseFlag() instead.")
 std::string UnparseFlag(Duration d);
 
 // Time
@@ -815,7 +823,11 @@ std::chrono::system_clock::time_point ToChronoTime(Time);
 // Additionally, if you'd like to specify a time as a count of
 // seconds/milliseconds/etc from the Unix epoch, use an absl::Duration flag
 // and add that duration to absl::UnixEpoch() to get an absl::Time.
+bool AbslParseFlag(absl::string_view text, Time* t, std::string* error);
+std::string AbslUnparseFlag(Time t);
+ABSL_DEPRECATED("Use AbslParseFlag() instead.")
 bool ParseFlag(const std::string& text, Time* t, std::string* error);
+ABSL_DEPRECATED("Use AbslUnparseFlag() instead.")
 std::string UnparseFlag(Time t);
 
 // TimeZone
@@ -1401,8 +1413,7 @@ constexpr Duration FromInt64(int64_t v, std::ratio<3600>) {
 // IsValidRep64<T>(0) is true if the expression `int64_t{std::declval<T>()}` is
 // valid. That is, if a T can be assigned to an int64_t without narrowing.
 template <typename T>
-constexpr auto IsValidRep64(int)
-    -> decltype(int64_t{std::declval<T>()}, bool()) {
+constexpr auto IsValidRep64(int) -> decltype(int64_t{std::declval<T>()} == 0) {
   return true;
 }
 template <typename T>
@@ -1564,6 +1575,7 @@ constexpr Time FromTimeT(time_t t) {
   return time_internal::FromUnixDuration(Seconds(t));
 }
 
+ABSL_NAMESPACE_END
 }  // namespace absl
 
 #endif  // ABSL_TIME_TIME_H_

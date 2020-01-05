@@ -22,6 +22,7 @@
 #include "absl/meta/type_traits.h"
 
 namespace absl {
+ABSL_NAMESPACE_BEGIN
 template <typename IntType>
 class uniform_int_distribution;
 
@@ -154,15 +155,26 @@ using UniformDistribution =
                               absl::uniform_int_distribution<NumType>,
                               absl::uniform_real_distribution<NumType>>::type;
 
-template <typename TagType, typename NumType>
+template <typename NumType>
 struct UniformDistributionWrapper : public UniformDistribution<NumType> {
-  explicit UniformDistributionWrapper(NumType lo, NumType hi)
+  template <typename TagType>
+  explicit UniformDistributionWrapper(TagType, NumType lo, NumType hi)
       : UniformDistribution<NumType>(
             uniform_lower_bound<NumType>(TagType{}, lo, hi),
             uniform_upper_bound<NumType>(TagType{}, lo, hi)) {}
+
+  explicit UniformDistributionWrapper(NumType lo, NumType hi)
+      : UniformDistribution<NumType>(
+            uniform_lower_bound<NumType>(IntervalClosedOpenTag(), lo, hi),
+            uniform_upper_bound<NumType>(IntervalClosedOpenTag(), lo, hi)) {}
+
+  explicit UniformDistributionWrapper()
+      : UniformDistribution<NumType>(std::numeric_limits<NumType>::lowest(),
+                                     (std::numeric_limits<NumType>::max)()) {}
 };
 
 }  // namespace random_internal
+ABSL_NAMESPACE_END
 }  // namespace absl
 
 #endif  // ABSL_RANDOM_INTERNAL_UNIFORM_HELPER_H_

@@ -82,6 +82,7 @@
 #endif
 
 namespace absl {
+ABSL_NAMESPACE_BEGIN
 
 class Condition;
 struct SynchWaitParams;
@@ -628,7 +629,7 @@ class ABSL_SCOPED_LOCKABLE WriterMutexLock {
 // Example:
 //
 //   // assume count_ is not internal reference count
-//   int count_ GUARDED_BY(mu_);
+//   int count_ ABSL_GUARDED_BY(mu_);
 //
 //   mu_.LockWhen(Condition(+[](int* count) { return *count == 0; },
 //         &count_));
@@ -1000,7 +1001,7 @@ void RegisterCondVarTracer(void (*fn)(const char *msg, const void *cv));
 //
 // 'pc' is the program counter being symbolized, 'out' is the buffer to write
 // into, and 'out_size' is the size of the buffer.  This function can return
-// false if symbolizing failed, or true if a null-terminated symbol was written
+// false if symbolizing failed, or true if a NUL-terminated symbol was written
 // to 'out.'
 //
 // This has the same memory ordering concerns as RegisterMutexProfiler() above.
@@ -1039,6 +1040,7 @@ enum class OnDeadlockCycle {
 // the manner chosen here.
 void SetMutexDeadlockDetectionMode(OnDeadlockCycle mode);
 
+ABSL_NAMESPACE_END
 }  // namespace absl
 
 // In some build configurations we pass --detect-odr-violations to the

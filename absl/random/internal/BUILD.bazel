@@ -51,6 +51,7 @@ cc_library(
     visibility = [
         "//absl/random:__pkg__",
     ],
+    deps = ["//absl/base:config"],
 )
 
 cc_library(
@@ -60,13 +61,11 @@ cc_library(
     linkopts = ABSL_DEFAULT_LINKOPTS,
     deps = [
         ":distribution_caller",
-        ":fast_uniform_bits",
-        ":fastmath",
         ":traits",
         ":uniform_helper",
+        "//absl/base",
         "//absl/meta:type_traits",
         "//absl/strings",
-        "//absl/types:span",
     ],
 )
 
@@ -80,6 +79,7 @@ cc_library(
     visibility = [
         "//absl/random:__pkg__",
     ],
+    deps = ["//absl/base:config"],
 )
 
 cc_library(
@@ -91,7 +91,10 @@ cc_library(
         "seed_material.h",
     ],
     copts = ABSL_DEFAULT_COPTS,
-    linkopts = ABSL_DEFAULT_LINKOPTS,
+    linkopts = ABSL_DEFAULT_LINKOPTS + select({
+        "//absl:windows": ["-DEFAULTLIB:bcrypt.lib"],
+        "//conditions:default": [],
+    }),
     deps = [
         ":fast_uniform_bits",
         "//absl/base:core_headers",
@@ -137,6 +140,7 @@ cc_library(
     ],
     copts = ABSL_DEFAULT_COPTS,
     linkopts = ABSL_DEFAULT_LINKOPTS,
+    deps = ["//absl/base:config"],
 )
 
 cc_library(
@@ -147,6 +151,7 @@ cc_library(
     ],
     copts = ABSL_DEFAULT_COPTS,
     linkopts = ABSL_DEFAULT_LINKOPTS,
+    deps = ["//absl/base:config"],
 )
 
 cc_library(
@@ -177,9 +182,9 @@ cc_library(
 )
 
 cc_library(
-    name = "distribution_impl",
+    name = "generate_real",
     hdrs = [
-        "distribution_impl.h",
+        "generate_real.h",
     ],
     copts = ABSL_DEFAULT_COPTS,
     linkopts = ABSL_DEFAULT_LINKOPTS,
@@ -187,8 +192,7 @@ cc_library(
         ":fastmath",
         ":traits",
         "//absl/base:bits",
-        "//absl/base:config",
-        "//absl/numeric:int128",
+        "//absl/meta:type_traits",
     ],
 )
 
@@ -200,6 +204,19 @@ cc_library(
     copts = ABSL_DEFAULT_COPTS,
     linkopts = ABSL_DEFAULT_LINKOPTS,
     deps = ["//absl/base:bits"],
+)
+
+cc_library(
+    name = "wide_multiply",
+    hdrs = ["wide_multiply.h"],
+    copts = ABSL_DEFAULT_COPTS,
+    linkopts = ABSL_DEFAULT_LINKOPTS,
+    deps = [
+        ":traits",
+        "//absl/base:bits",
+        "//absl/base:config",
+        "//absl/numeric:int128",
+    ],
 )
 
 cc_library(
@@ -256,6 +273,7 @@ cc_library(
         "randen-keys.inc",
         "platform.h",
     ],
+    deps = ["//absl/base:config"],
 )
 
 cc_library(
@@ -284,6 +302,8 @@ cc_library(
     linkopts = ABSL_DEFAULT_LINKOPTS,
     deps = [
         ":platform",
+        "//absl/base:config",
+        "//absl/base:core_headers",
     ],
 )
 
@@ -303,6 +323,7 @@ cc_library(
     deps = [
         ":platform",
         ":randen_hwaes_impl",
+        "//absl/base:config",
     ],
 )
 
@@ -324,6 +345,7 @@ cc_library(
     linkopts = ABSL_DEFAULT_LINKOPTS,
     deps = [
         ":platform",
+        "//absl/base:config",
         "//absl/base:core_headers",
     ],
 )
@@ -354,6 +376,7 @@ cc_library(
     copts = ABSL_DEFAULT_COPTS,
     linkopts = ABSL_DEFAULT_LINKOPTS,
     deps = [
+        "//absl/base:config",
         "//absl/base:core_headers",
         "//absl/base:raw_logging_internal",
         "//absl/strings",
@@ -387,16 +410,17 @@ cc_test(
 )
 
 cc_test(
-    name = "distribution_impl_test",
+    name = "generate_real_test",
     size = "small",
-    srcs = ["distribution_impl_test.cc"],
+    srcs = [
+        "generate_real_test.cc",
+    ],
     copts = ABSL_TEST_COPTS,
     linkopts = ABSL_DEFAULT_LINKOPTS,
     deps = [
-        ":distribution_impl",
+        ":generate_real",
         "//absl/base:bits",
         "//absl/flags:flag",
-        "//absl/numeric:int128",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -476,6 +500,29 @@ cc_test(
     deps = [
         ":fast_uniform_bits",
         "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "mocking_bit_gen_base",
+    hdrs = ["mocking_bit_gen_base.h"],
+    linkopts = ABSL_DEFAULT_LINKOPTS,
+    deps = [
+        "//absl/random",
+        "//absl/strings",
+    ],
+)
+
+cc_library(
+    name = "mock_overload_set",
+    testonly = 1,
+    hdrs = ["mock_overload_set.h"],
+    visibility = [
+        "//absl/random:__pkg__",
+    ],
+    deps = [
+        "//absl/random:mocking_bit_gen",
+        "@com_google_googletest//:gtest",
     ],
 )
 
@@ -600,6 +647,20 @@ cc_test(
     ],
 )
 
+cc_test(
+    name = "wide_multiply_test",
+    size = "small",
+    srcs = ["wide_multiply_test.cc"],
+    copts = ABSL_TEST_COPTS,
+    linkopts = ABSL_DEFAULT_LINKOPTS,
+    deps = [
+        ":wide_multiply",
+        "//absl/base:bits",
+        "//absl/numeric:int128",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
 cc_library(
     name = "nanobenchmark",
     srcs = ["nanobenchmark.cc"],
@@ -608,6 +669,7 @@ cc_library(
     deps = [
         ":platform",
         ":randen_engine",
+        "//absl/base:core_headers",
         "//absl/base:raw_logging_internal",
     ],
 )
@@ -618,11 +680,6 @@ cc_library(
     copts = ABSL_DEFAULT_COPTS,
     linkopts = ABSL_DEFAULT_LINKOPTS,
     deps = [
-        ":distribution_impl",
-        ":fast_uniform_bits",
-        ":iostream_state_saver",
-        ":traits",
-        "//absl/base:core_headers",
         "//absl/meta:type_traits",
     ],
 )

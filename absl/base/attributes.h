@@ -157,10 +157,12 @@
 // Tags a function as weak for the purposes of compilation and linking.
 // Weak attributes currently do not work properly in LLVM's Windows backend,
 // so disable them there. See https://bugs.llvm.org/show_bug.cgi?id=37598
-// for futher information.
-#if (ABSL_HAVE_ATTRIBUTE(weak) || \
+// for further information.
+// The MinGW compiler doesn't complain about the weak attribute until the link
+// step, presumably because Windows doesn't use ELF binaries.
+#if (ABSL_HAVE_ATTRIBUTE(weak) ||                   \
      (defined(__GNUC__) && !defined(__clang__))) && \
-    !(defined(__llvm__) && defined(_WIN32))
+    !(defined(__llvm__) && defined(_WIN32)) && !defined(__MINGW32__)
 #undef ABSL_ATTRIBUTE_WEAK
 #define ABSL_ATTRIBUTE_WEAK __attribute__((weak))
 #define ABSL_HAVE_ATTRIBUTE_WEAK 1
@@ -599,7 +601,6 @@
 //
 // Note that this attribute is redundant if the variable is declared constexpr.
 #if ABSL_HAVE_CPP_ATTRIBUTE(clang::require_constant_initialization)
-// NOLINTNEXTLINE(whitespace/braces)
 #define ABSL_CONST_INIT [[clang::require_constant_initialization]]
 #else
 #define ABSL_CONST_INIT

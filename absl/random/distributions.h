@@ -67,6 +67,7 @@
 #include "absl/random/zipf_distribution.h"
 
 namespace absl {
+ABSL_NAMESPACE_BEGIN
 
 ABSL_INTERNAL_INLINE_CONSTEXPR(IntervalClosedClosedTag, IntervalClosedClosed,
                                {});
@@ -96,7 +97,7 @@ ABSL_INTERNAL_INLINE_CONSTEXPR(IntervalOpenClosedTag, IntervalOpenClosed, {});
 // the return type based on the provided endpoint arguments {A lo, B hi}.
 // Given these endpoints, one of {A, B} will be chosen as the return type, if
 // a type can be implicitly converted into the other in a lossless way. The
-// lack of any such implcit conversion between {A, B} will produce a
+// lack of any such implicit conversion between {A, B} will produce a
 // compile-time error
 //
 // See https://en.wikipedia.org/wiki/Uniform_distribution_(continuous)
@@ -124,7 +125,15 @@ Uniform(TagType tag,
         URBG&& urbg,  // NOLINT(runtime/references)
         R lo, R hi) {
   using gen_t = absl::decay_t<URBG>;
-  return random_internal::UniformImpl<R, TagType, gen_t>(tag, urbg, lo, hi);
+  using distribution_t = random_internal::UniformDistributionWrapper<R>;
+  using format_t = random_internal::DistributionFormatTraits<distribution_t>;
+
+  auto a = random_internal::uniform_lower_bound(tag, lo, hi);
+  auto b = random_internal::uniform_upper_bound(tag, lo, hi);
+  if (a > b) return a;
+
+  return random_internal::DistributionCaller<gen_t>::template Call<
+      distribution_t, format_t>(&urbg, tag, lo, hi);
 }
 
 // absl::Uniform<T>(bitgen, lo, hi)
@@ -135,11 +144,17 @@ template <typename R = void, typename URBG>
 typename absl::enable_if_t<!std::is_same<R, void>::value, R>  //
 Uniform(URBG&& urbg,  // NOLINT(runtime/references)
         R lo, R hi) {
-  constexpr auto tag = absl::IntervalClosedOpen;
-  using tag_t = decltype(tag);
   using gen_t = absl::decay_t<URBG>;
+  using distribution_t = random_internal::UniformDistributionWrapper<R>;
+  using format_t = random_internal::DistributionFormatTraits<distribution_t>;
 
-  return random_internal::UniformImpl<R, tag_t, gen_t>(tag, urbg, lo, hi);
+  constexpr auto tag = absl::IntervalClosedOpen;
+  auto a = random_internal::uniform_lower_bound(tag, lo, hi);
+  auto b = random_internal::uniform_upper_bound(tag, lo, hi);
+  if (a > b) return a;
+
+  return random_internal::DistributionCaller<gen_t>::template Call<
+      distribution_t, format_t>(&urbg, lo, hi);
 }
 
 // absl::Uniform(tag, bitgen, lo, hi)
@@ -156,9 +171,16 @@ Uniform(TagType tag,
         A lo, B hi) {
   using gen_t = absl::decay_t<URBG>;
   using return_t = typename random_internal::uniform_inferred_return_t<A, B>;
+  using distribution_t = random_internal::UniformDistributionWrapper<return_t>;
+  using format_t = random_internal::DistributionFormatTraits<distribution_t>;
 
-  return random_internal::UniformImpl<return_t, TagType, gen_t>(tag, urbg, lo,
-                                                                hi);
+  auto a = random_internal::uniform_lower_bound<return_t>(tag, lo, hi);
+  auto b = random_internal::uniform_upper_bound<return_t>(tag, lo, hi);
+  if (a > b) return a;
+
+  return random_internal::DistributionCaller<gen_t>::template Call<
+      distribution_t, format_t>(&urbg, tag, static_cast<return_t>(lo),
+                                static_cast<return_t>(hi));
 }
 
 // absl::Uniform(bitgen, lo, hi)
@@ -171,13 +193,19 @@ typename absl::enable_if_t<std::is_same<R, void>::value,
                            random_internal::uniform_inferred_return_t<A, B>>
 Uniform(URBG&& urbg,  // NOLINT(runtime/references)
         A lo, B hi) {
-  constexpr auto tag = absl::IntervalClosedOpen;
-  using tag_t = decltype(tag);
   using gen_t = absl::decay_t<URBG>;
   using return_t = typename random_internal::uniform_inferred_return_t<A, B>;
+  using distribution_t = random_internal::UniformDistributionWrapper<return_t>;
+  using format_t = random_internal::DistributionFormatTraits<distribution_t>;
 
-  return random_internal::UniformImpl<return_t, tag_t, gen_t>(tag, urbg, lo,
-                                                              hi);
+  constexpr auto tag = absl::IntervalClosedOpen;
+  auto a = random_internal::uniform_lower_bound<return_t>(tag, lo, hi);
+  auto b = random_internal::uniform_upper_bound<return_t>(tag, lo, hi);
+  if (a > b) return a;
+
+  return random_internal::DistributionCaller<gen_t>::template Call<
+      distribution_t, format_t>(&urbg, static_cast<return_t>(lo),
+                                static_cast<return_t>(hi));
 }
 
 // absl::Uniform<unsigned T>(bitgen)
@@ -187,13 +215,12 @@ Uniform(URBG&& urbg,  // NOLINT(runtime/references)
 template <typename R, typename URBG>
 typename absl::enable_if_t<!std::is_signed<R>::value, R>  //
 Uniform(URBG&& urbg) {  // NOLINT(runtime/references)
-  constexpr auto tag = absl::IntervalClosedClosed;
-  constexpr auto lo = std::numeric_limits<R>::lowest();
-  constexpr auto hi = (std::numeric_limits<R>::max)();
-  using tag_t = decltype(tag);
   using gen_t = absl::decay_t<URBG>;
+  using distribution_t = random_internal::UniformDistributionWrapper<R>;
+  using format_t = random_internal::DistributionFormatTraits<distribution_t>;
 
-  return random_internal::UniformImpl<R, tag_t, gen_t>(tag, urbg, lo, hi);
+  return random_internal::DistributionCaller<gen_t>::template Call<
+      distribution_t, format_t>(&urbg);
 }
 
 // -----------------------------------------------------------------------------
@@ -432,6 +459,7 @@ IntType Zipf(URBG&& urbg,  // NOLINT(runtime/references)
       distribution_t, format_t>(&urbg, hi, q, v);
 }
 
+ABSL_NAMESPACE_END
 }  // namespace absl
 
 #endif  // ABSL_RANDOM_DISTRIBUTIONS_H_

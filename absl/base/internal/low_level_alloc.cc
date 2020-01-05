@@ -63,6 +63,7 @@
 #endif  // __APPLE__
 
 namespace absl {
+ABSL_NAMESPACE_BEGIN
 namespace base_internal {
 
 // A first-fit allocator with amortized logarithmic free() time.
@@ -211,7 +212,7 @@ struct LowLevelAlloc::Arena {
   // Result of sysconf(_SC_PAGESIZE)
   const size_t pagesize;
   // Lowest power of two >= max(16, sizeof(AllocList))
-  const size_t roundup;
+  const size_t round_up;
   // Smallest allocation block size
   const size_t min_size;
   // PRNG state
@@ -336,11 +337,11 @@ size_t GetPageSize() {
 
 size_t RoundedUpBlockSize() {
   // Round up block sizes to a power of two close to the header size.
-  size_t roundup = 16;
-  while (roundup < sizeof(AllocList::Header)) {
-    roundup += roundup;
+  size_t round_up = 16;
+  while (round_up < sizeof(AllocList::Header)) {
+    round_up += round_up;
   }
-  return roundup;
+  return round_up;
 }
 
 }  // namespace
@@ -350,8 +351,8 @@ LowLevelAlloc::Arena::Arena(uint32_t flags_value)
       allocation_count(0),
       flags(flags_value),
       pagesize(GetPageSize()),
-      roundup(RoundedUpBlockSize()),
-      min_size(2 * roundup),
+      round_up(RoundedUpBlockSize()),
+      min_size(2 * round_up),
       random(0) {
   freelist.header.size = 0;
   freelist.header.magic =
@@ -447,7 +448,7 @@ static inline uintptr_t RoundUp(uintptr_t addr, uintptr_t align) {
 // that the freelist is in the correct order, that it
 // consists of regions marked "unallocated", and that no two regions
 // are adjacent in memory (they should have been coalesced).
-// L < arena->mu
+// L >= arena->mu
 static AllocList *Next(int i, AllocList *prev, LowLevelAlloc::Arena *arena) {
   ABSL_RAW_CHECK(i < prev->levels, "too few levels in Next()");
   AllocList *next = prev->next[i];
@@ -508,8 +509,6 @@ void LowLevelAlloc::Free(void *v) {
   if (v != nullptr) {
     AllocList *f = reinterpret_cast<AllocList *>(
                         reinterpret_cast<char *>(v) - sizeof (f->header));
-    ABSL_RAW_CHECK(f->header.magic == Magic(kMagicAllocated, &f->header),
-                   "bad magic number in Free()");
     LowLevelAlloc::Arena *arena = f->header.arena;
     ArenaLock section(arena);
     AddToFreelist(v, arena);
@@ -528,7 +527,7 @@ static void *DoAllocWithArena(size_t request, LowLevelAlloc::Arena *arena) {
     ArenaLock section(arena);
     // round up with header
     size_t req_rnd = RoundUp(CheckedAdd(request, sizeof (s->header)),
-                             arena->roundup);
+                             arena->round_up);
     for (;;) {      // loop until we find a suitable region
       // find the minimum levels that a block of this size must have
       int i = LLA_SkiplistLevels(req_rnd, arena->min_size, nullptr) - 1;
@@ -614,6 +613,7 @@ void *LowLevelAlloc::AllocWithArena(size_t request, Arena *arena) {
 }
 
 }  // namespace base_internal
+ABSL_NAMESPACE_END
 }  // namespace absl
 
 #endif  // ABSL_LOW_LEVEL_ALLOC_MISSING

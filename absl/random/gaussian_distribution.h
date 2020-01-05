@@ -28,11 +28,12 @@
 #include <limits>
 #include <type_traits>
 
-#include "absl/random/internal/distribution_impl.h"
 #include "absl/random/internal/fast_uniform_bits.h"
+#include "absl/random/internal/generate_real.h"
 #include "absl/random/internal/iostream_state_saver.h"
 
 namespace absl {
+ABSL_NAMESPACE_BEGIN
 namespace random_internal {
 
 // absl::gaussian_distribution_base implements the underlying ziggurat algorithm
@@ -207,12 +208,18 @@ namespace random_internal {
 
 template <typename URBG>
 inline double gaussian_distribution_base::zignor_fallback(URBG& g, bool neg) {
+  using random_internal::GeneratePositiveTag;
+  using random_internal::GenerateRealFromBits;
+
   // This fallback path happens approximately 0.05% of the time.
   double x, y;
   do {
     // kRInv = 1/r, U(0, 1)
-    x = kRInv * std::log(RandU64ToDouble<PositiveValueT, false>(fast_u64_(g)));
-    y = -std::log(RandU64ToDouble<PositiveValueT, false>(fast_u64_(g)));
+    x = kRInv *
+        std::log(GenerateRealFromBits<double, GeneratePositiveTag, false>(
+            fast_u64_(g)));
+    y = -std::log(
+        GenerateRealFromBits<double, GeneratePositiveTag, false>(fast_u64_(g)));
   } while ((y + y) < (x * x));
   return neg ? (x - kR) : (kR - x);
 }
@@ -220,6 +227,10 @@ inline double gaussian_distribution_base::zignor_fallback(URBG& g, bool neg) {
 template <typename URBG>
 inline double gaussian_distribution_base::zignor(
     URBG& g) {  // NOLINT(runtime/references)
+  using random_internal::GeneratePositiveTag;
+  using random_internal::GenerateRealFromBits;
+  using random_internal::GenerateSignedTag;
+
   while (true) {
     // We use a single uint64_t to generate both a double and a strip.
     // These bits are unused when the generated double is > 1/2^5.
@@ -227,7 +238,8 @@ inline double gaussian_distribution_base::zignor(
     // values (those smaller than 1/2^5, which all end up on the left tail).
     uint64_t bits = fast_u64_(g);
     int i = static_cast<int>(bits & kMask);  // pick a random strip
-    double j = RandU64ToDouble<SignedValueT, false>(bits);  // U(-1, 1)
+    double j = GenerateRealFromBits<double, GenerateSignedTag, false>(
+        bits);  // U(-1, 1)
     const double x = j * zg_.x[i];
 
     // Retangular box. Handles >97% of all cases.
@@ -244,7 +256,8 @@ inline double gaussian_distribution_base::zignor(
     }
 
     // i > 0: Wedge samples using precomputed values.
-    double v = RandU64ToDouble<PositiveValueT, false>(fast_u64_(g));  // U(0, 1)
+    double v = GenerateRealFromBits<double, GeneratePositiveTag, false>(
+        fast_u64_(g));  // U(0, 1)
     if ((zg_.f[i + 1] + v * (zg_.f[i] - zg_.f[i + 1])) <
         std::exp(-0.5 * x * x)) {
       return x;
@@ -255,6 +268,7 @@ inline double gaussian_distribution_base::zignor(
 }
 
 }  // namespace random_internal
+ABSL_NAMESPACE_END
 }  // namespace absl
 
 #endif  // ABSL_RANDOM_GAUSSIAN_DISTRIBUTION_H_
